@@ -1,0 +1,29 @@
+name = "jarvis-ai-assistant"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "jarvis-ai-assistant-prod"
+
+[[d1_databases]]
+binding = "jarvis_conversations"
+database_name = "jarvis-conversations"
+database_id = "0f0c1229-d748-4e8c-9e26-5d6f2c9a1a68"
+
+[[kv_namespaces]]
+binding = "MEMORY_KV"
+id = "f93d156d2de84d08b8d6b972c044ad17"
+
+[[migrations]]
+tag = "v1"
+new_classes = [ "AgentOrchestrator", "ConversationManager" ]
+[[durable_objects.bindings]]
+name = "AGENT_ORCHESTRATOR"
+class_name = "AgentOrchestrator"
+
+[[durable_objects.bindings]]
+name = "CONVERSATION_MANAGER"
+class_name = "ConversationManager"
+
+[vars]
+ENVIRONMENT = "production"
