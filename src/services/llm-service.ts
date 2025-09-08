@@ -2,29 +2,70 @@ import { Env } from '../types/env';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
+/**
+ * Defines the structure for a request to the LLM service.
+ */
 export interface LLMRequest {
+  /**
+   * The name of the model to use for the request (e.g., 'gpt-4-turbo-preview', 'claude-2.1').
+   */
   model: string;
+  /**
+   * A list of messages forming the conversation history.
+   */
   messages: Array<{
     role: 'system' | 'user' | 'assistant';
     content: string;
   }>;
+  /**
+   * The sampling temperature to use, controlling randomness.
+   */
   temperature?: number;
+  /**
+   * The maximum number of tokens to generate.
+   */
   maxTokens?: number;
+  /**
+   * Whether to stream the response back.
+   */
   stream?: boolean;
 }
 
+/**
+ * Defines the structure for a response from the LLM service.
+ */
 export interface LLMResponse {
+  /**
+   * The text content of the response from the model.
+   */
   content: string;
+  /**
+   * The total number of tokens used for the request and response.
+   */
   tokensUsed?: number;
+  /**
+   * The model that was used to generate the response.
+   */
   model: string;
+  /**
+   * The reason the model stopped generating tokens.
+   */
   finishReason?: string;
 }
 
+/**
+ * A service class for interacting with Large Language Models (LLMs).
+ * It provides a unified interface for both OpenAI and Anthropic models.
+ */
 export class LLMService {
   private env: Env;
   private openai: OpenAI;
   private anthropic: Anthropic;
 
+  /**
+   * Creates an instance of the LLMService.
+   * @param {Env} env - The environment object containing API keys and other configurations.
+   */
   constructor(env: Env) {
     this.env = env;
     this.openai = new OpenAI({
@@ -35,6 +76,13 @@ export class LLMService {
     });
   }
 
+  /**
+   * Generates a response from an LLM based on the provided request.
+   * It automatically routes the request to the appropriate provider (OpenAI or Anthropic).
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<LLMResponse>} A promise that resolves to the LLM's response.
+   * @throws {Error} If the LLM request fails.
+   */
   async generateResponse(request: LLMRequest): Promise<LLMResponse> {
     try {
       if (this.isAnthropicModel(request.model)) {
@@ -48,6 +96,12 @@ export class LLMService {
     }
   }
 
+  /**
+   * Generates a response from an OpenAI model.
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<LLMResponse>} A promise that resolves to the OpenAI model's response.
+   * @private
+   */
   private async generateOpenAIResponse(request: LLMRequest): Promise<LLMResponse> {
     const completion = await this.openai.chat.completions.create({
       model: request.model,
@@ -70,6 +124,12 @@ export class LLMService {
     };
   }
 
+  /**
+   * Generates a response from an Anthropic model.
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<LLMResponse>} A promise that resolves to the Anthropic model's response.
+   * @private
+   */
   private async generateAnthropicResponse(request: LLMRequest): Promise<LLMResponse> {
     // Convert OpenAI format to Anthropic format
     const systemMessage = request.messages.find(m => m.role === 'system');
@@ -99,10 +159,21 @@ export class LLMService {
     };
   }
 
+  /**
+   * Checks if a model name belongs to Anthropic.
+   * @param {string} model - The name of the model.
+   * @returns {boolean} True if the model is an Anthropic model, false otherwise.
+   * @private
+   */
   private isAnthropicModel(model: string): boolean {
     return model.includes('claude') || model.includes('anthropic');
   }
 
+  /**
+   * Generates a streaming response from an LLM.
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<ReadableStream>} A promise that resolves to a ReadableStream of the response.
+   */
   async generateStreamResponse(request: LLMRequest): Promise<ReadableStream> {
     if (this.isAnthropicModel(request.model)) {
       return this.generateAnthropicStream(request);
@@ -111,6 +182,12 @@ export class LLMService {
     }
   }
 
+  /**
+   * Generates a streaming response from an OpenAI model.
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<ReadableStream>} A promise that resolves to a ReadableStream of the response.
+   * @private
+   */
   private async generateOpenAIStream(request: LLMRequest): Promise<ReadableStream> {
     const stream = await this.openai.chat.completions.create({
       model: request.model,
@@ -138,6 +215,12 @@ export class LLMService {
     });
   }
 
+  /**
+   * Generates a streaming response from an Anthropic model.
+   * @param {LLMRequest} request - The request object for the LLM.
+   * @returns {Promise<ReadableStream>} A promise that resolves to a ReadableStream of the response.
+   * @private
+   */
   private async generateAnthropicStream(request: LLMRequest): Promise<ReadableStream> {
     const systemMessage = request.messages.find(m => m.role === 'system');
     const userMessages = request.messages.filter(m => m.role !== 'system');

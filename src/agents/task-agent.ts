@@ -2,15 +2,56 @@ import { Env } from '../types/env';
 import { AgentRequest, AgentResponse } from './orchestrator';
 import { LLMService } from '../services/llm-service';
 
+/**
+ * Represents the structured analysis of a task.
+ */
+interface TaskAnalysis {
+  /** The type of task (e.g., 'information_processing', 'planning'). */
+  type: string;
+  /** The estimated complexity of the task. */
+  complexity: 'simple' | 'medium' | 'complex';
+  /** An array of steps required to complete the task. */
+  steps: string[];
+  /** Any special requirements or constraints for the task. */
+  requirements: string[];
+}
+
+/**
+ * Represents the result of a task execution.
+ */
+interface TaskExecutionResult {
+  /** The main content of the task's result. */
+  content: string;
+  /** The steps that were executed to produce the result. */
+  stepsExecuted: string[];
+  /** Optional follow-up actions suggested by the agent. */
+  followUpActions?: string[];
+}
+
+/**
+ * An AI agent specialized in analyzing and executing specific tasks.
+ * This agent breaks down a user's request into a structured plan and then executes it.
+ */
 export class TaskAgent {
   private env: Env;
   private llmService: LLMService;
 
+  /**
+   * Creates an instance of the TaskAgent.
+   * @param {Env} env - The environment object.
+   */
   constructor(env: Env) {
     this.env = env;
     this.llmService = new LLMService(env);
   }
 
+  /**
+   * Processes a task-oriented request.
+   * It first analyzes the task, then executes it, and finally returns a structured response.
+   * @param {AgentRequest} request - The incoming agent request.
+   * @param {any} memory - The current conversation memory.
+   * @returns {Promise<AgentResponse>} A promise that resolves to the agent's response.
+   */
   async process(request: AgentRequest, memory: any): Promise<AgentResponse> {
     try {
       // Analyze the task and determine execution strategy
@@ -23,7 +64,7 @@ export class TaskAgent {
         success: true,
         content: executionResult.content,
         agentUsed: 'task',
-        executionTime: 0,
+        executionTime: 0, // Will be set by the orchestrator
         metadata: {
           taskType: taskAnalysis.type,
           complexity: taskAnalysis.complexity,
@@ -43,12 +84,13 @@ export class TaskAgent {
     }
   }
 
-  private async analyzeTask(content: string): Promise<{
-    type: string;
-    complexity: 'simple' | 'medium' | 'complex';
-    steps: string[];
-    requirements: string[];
-  }> {
+  /**
+   * Analyzes the user's request to create a structured task plan.
+   * @param {string} content - The user's request content.
+   * @returns {Promise<TaskAnalysis>} A promise that resolves to a structured analysis of the task.
+   * @private
+   */
+  private async analyzeTask(content: string): Promise<TaskAnalysis> {
     const response = await this.llmService.generateResponse({
       model: 'gpt-4-turbo-preview',
       messages: [{
@@ -81,15 +123,19 @@ Respond in JSON format with keys: type, complexity, steps, requirements`
     }
   }
 
+  /**
+   * Executes the task based on the analysis and provides a result.
+   * @param {TaskAnalysis} analysis - The structured analysis of the task.
+   * @param {AgentRequest} request - The original agent request.
+   * @param {any} memory - The current conversation memory.
+   * @returns {Promise<TaskExecutionResult>} A promise that resolves to the result of the execution.
+   * @private
+   */
   private async executeTask(
-    analysis: any,
+    analysis: TaskAnalysis,
     request: AgentRequest,
     memory: any
-  ): Promise<{
-    content: string;
-    stepsExecuted: string[];
-    followUpActions?: string[];
-  }> {
+  ): Promise<TaskExecutionResult> {
     const systemPrompt = `You are a task execution specialist. Your job is to:
 1. Execute tasks step by step based on the provided analysis
 2. Provide detailed, actionable results
@@ -121,6 +167,12 @@ Please execute this task following the analyzed steps. Provide a comprehensive r
     };
   }
 
+  /**
+   * Extracts potential follow-up actions from the agent's response content.
+   * @param {string} content - The response content from the LLM.
+   * @returns {string[]} An array of suggested follow-up actions.
+   * @private
+   */
   private extractFollowUpActions(content: string): string[] {
     // Extract potential follow-up actions from the response
     const actionPatterns = [

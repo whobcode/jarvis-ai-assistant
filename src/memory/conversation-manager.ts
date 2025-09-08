@@ -2,17 +2,31 @@ import { DurableObject } from 'cloudflare:workers';
 import { Env, ConversationContext } from '../types/env';
 import { MemoryManager } from './memory-manager';
 
+/**
+ * A Durable Object responsible for managing the lifecycle of conversations.
+ * It handles creating, retrieving, updating, deleting, and listing conversations.
+ */
 export class ConversationManager extends DurableObject {
   private env: Env;
   private memoryManager: MemoryManager;
   private activeConversations: Map<string, ConversationContext> = new Map();
 
+  /**
+   * Creates an instance of ConversationManager.
+   * @param {DurableObjectState} ctx - The state of the Durable Object.
+   * @param {Env} env - The environment object.
+   */
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.env = env;
     this.memoryManager = new MemoryManager(env);
   }
 
+  /**
+   * Handles incoming fetch requests to the Durable Object.
+   * @param {Request} request - The incoming request.
+   * @returns {Promise<Response>} A promise that resolves to the response.
+   */
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     
@@ -32,6 +46,12 @@ export class ConversationManager extends DurableObject {
     }
   }
 
+  /**
+   * Handles the creation of a new conversation.
+   * @param {Request} request - The request to create a conversation.
+   * @returns {Promise<Response>} A response containing the new conversation's details.
+   * @private
+   */
   private async handleCreateConversation(request: Request): Promise<Response> {
     try {
       const { userId, metadata = {} } = await request.json();
@@ -81,6 +101,12 @@ export class ConversationManager extends DurableObject {
     }
   }
 
+  /**
+   * Handles retrieving a specific conversation's details.
+   * @param {Request} request - The request to get a conversation.
+   * @returns {Promise<Response>} A response containing the conversation's context and memory.
+   * @private
+   */
   private async handleGetConversation(request: Request): Promise<Response> {
     try {
       const url = new URL(request.url);
@@ -118,6 +144,12 @@ export class ConversationManager extends DurableObject {
     }
   }
 
+  /**
+   * Handles updating a conversation's metadata.
+   * @param {Request} request - The request to update a conversation.
+   * @returns {Promise<Response>} A response containing the updated conversation context.
+   * @private
+   */
   private async handleUpdateConversation(request: Request): Promise<Response> {
     try {
       const { conversationId, metadata } = await request.json();
@@ -159,6 +191,12 @@ export class ConversationManager extends DurableObject {
     }
   }
 
+  /**
+   * Handles deleting a conversation and its associated memory.
+   * @param {Request} request - The request to delete a conversation.
+   * @returns {Promise<Response>} A success response.
+   * @private
+   */
   private async handleDeleteConversation(request: Request): Promise<Response> {
     try {
       const { conversationId } = await request.json();
@@ -184,6 +222,12 @@ export class ConversationManager extends DurableObject {
     }
   }
 
+  /**
+   * Handles listing all conversations for a specific user.
+   * @param {Request} request - The request to list conversations.
+   * @returns {Promise<Response>} A response containing a list of the user's conversations.
+   * @private
+   */
   private async handleListConversations(request: Request): Promise<Response> {
     try {
       const url = new URL(request.url);

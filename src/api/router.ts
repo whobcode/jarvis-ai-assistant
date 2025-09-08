@@ -1,15 +1,30 @@
 import { Env, User, ConversationContext } from '../types/env';
 import { AgentRequest } from '../agents/orchestrator';
 
+/**
+ * Handles routing of incoming API requests to the appropriate handlers.
+ * It acts as the main entry point for all API interactions after authentication.
+ */
 export class APIRouter {
   private env: Env;
   private ctx: ExecutionContext;
 
+  /**
+   * Creates an instance of the APIRouter.
+   * @param {Env} env - The environment object.
+   * @param {ExecutionContext} ctx - The execution context of the request.
+   */
   constructor(env: Env, ctx: ExecutionContext) {
     this.env = env;
     this.ctx = ctx;
   }
 
+  /**
+   * Handles an incoming request and routes it to the correct method.
+   * @param {Request} request - The incoming request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} A promise that resolves to the response.
+   */
   async handle(request: Request, user: User): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -49,6 +64,13 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a chat request by forwarding it to the AgentOrchestrator.
+   * @param {Request} request - The chat request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} The response from the agent.
+   * @private
+   */
   private async handleChat(request: Request, user: User): Promise<Response> {
     try {
       const body = await request.json();
@@ -106,6 +128,13 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a request to create a new conversation.
+   * @param {Request} request - The create conversation request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} The response from the ConversationManager.
+   * @private
+   */
   private async handleCreateConversation(request: Request, user: User): Promise<Response> {
     try {
       const body = await request.json();
@@ -134,6 +163,13 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a request to list all conversations for a user.
+   * @param {Request} request - The list conversations request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} The response from the ConversationManager.
+   * @private
+   */
   private async handleListConversations(request: Request, user: User): Promise<Response> {
     try {
       const managerId = this.env.CONVERSATION_MANAGER.idFromName(user.id);
@@ -153,6 +189,13 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a request to get a single conversation by its ID.
+   * @param {Request} request - The get conversation request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} The response from the ConversationManager.
+   * @private
+   */
   private async handleGetConversation(request: Request, user: User): Promise<Response> {
     try {
       const url = new URL(request.url);
@@ -185,6 +228,13 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a request to delete a conversation by its ID.
+   * @param {Request} request - The delete conversation request.
+   * @param {User} user - The authenticated user.
+   * @returns {Promise<Response>} The response from the ConversationManager.
+   * @private
+   */
   private async handleDeleteConversation(request: Request, user: User): Promise<Response> {
     try {
       const url = new URL(request.url);
@@ -222,6 +272,11 @@ export class APIRouter {
     }
   }
 
+  /**
+   * Handles a health check request.
+   * @returns {Promise<Response>} A simple health status response.
+   * @private
+   */
   private async handleHealth(): Promise<Response> {
     return new Response(JSON.stringify({
       status: 'healthy',
@@ -232,6 +287,11 @@ export class APIRouter {
     });
   }
 
+  /**
+   * Handles a system status request, checking the health of downstream services.
+   * @returns {Promise<Response>} A detailed status response.
+   * @private
+   */
   private async handleStatus(): Promise<Response> {
     try {
       // Check orchestrator status

@@ -2,15 +2,29 @@ import { Env } from '../types/env';
 import { AgentRequest, AgentResponse } from './orchestrator';
 import { LLMService } from '../services/llm-service';
 
+/**
+ * An AI agent focused on general reasoning, conversation, and problem-solving.
+ * This is the default agent for handling requests that don't fit specialized agents.
+ */
 export class ReasoningAgent {
   private env: Env;
   private llmService: LLMService;
 
+  /**
+   * Creates an instance of the ReasoningAgent.
+   * @param {Env} env - The environment object.
+   */
   constructor(env: Env) {
     this.env = env;
     this.llmService = new LLMService(env);
   }
 
+  /**
+   * Processes a request that requires reasoning and contextual understanding.
+   * @param {AgentRequest} request - The incoming agent request.
+   * @param {any} memory - The current conversation memory.
+   * @returns {Promise<AgentResponse>} A promise that resolves to the agent's response.
+   */
   async process(request: AgentRequest, memory: any): Promise<AgentResponse> {
     try {
       const systemPrompt = this.buildSystemPrompt(memory);
@@ -49,6 +63,12 @@ export class ReasoningAgent {
     }
   }
 
+  /**
+   * Builds the system prompt for the LLM, including persona and conversation history.
+   * @param {any} memory - The current conversation memory.
+   * @returns {string} The complete system prompt.
+   * @private
+   */
   private buildSystemPrompt(memory: any): string {
     return `You are JARVIS, an advanced AI assistant with sophisticated reasoning capabilities.
 
@@ -70,6 +90,12 @@ Your responses should be:
 5. Professional but warm in tone`;
   }
 
+  /**
+   * Builds the user prompt for the LLM from the agent request.
+   * @param {AgentRequest} request - The incoming agent request.
+   * @returns {string} The complete user prompt.
+   * @private
+   */
   private buildUserPrompt(request: AgentRequest): string {
     return `User Request: ${request.content}
 

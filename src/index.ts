@@ -2,10 +2,25 @@ import { AgentOrchestrator } from './agents/orchestrator';
 import { ConversationManager } from './memory/conversation-manager';
 import { APIRouter } from './api/router';
 import { AuthMiddleware } from './middleware/auth';
+import { Env } from './types/env';
 
+/**
+ * Re-exporting Durable Object classes for use in wrangler.toml.
+ */
 export { AgentOrchestrator, ConversationManager };
 
+/**
+ * The main fetch handler for the Cloudflare Worker.
+ * This is the entry point for all incoming HTTP requests.
+ */
 export default {
+  /**
+   * Handles incoming HTTP requests.
+   * @param {Request} request - The incoming request object.
+   * @param {Env} env - The environment object containing bindings and variables.
+   * @param {ExecutionContext} ctx - The execution context of the request.
+   * @returns {Promise<Response>} A promise that resolves to the response.
+   */
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     
@@ -23,7 +38,7 @@ export default {
     try {
       // Authentication middleware
       const authResult = await AuthMiddleware.authenticate(request, env);
-      if (!authResult.success) {
+      if (!authResult.success || !authResult.user) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
