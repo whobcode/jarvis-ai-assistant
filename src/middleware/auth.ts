@@ -1,12 +1,35 @@
 import { Env, User } from '../types/env';
 
+/**
+ * Represents the result of an authentication attempt.
+ */
 export interface AuthResult {
+  /**
+   * Whether the authentication was successful.
+   */
   success: boolean;
+  /**
+   * The authenticated user object, if successful.
+   */
   user?: User;
+  /**
+   * An error message, if authentication failed.
+   */
   error?: string;
 }
 
+/**
+ * A middleware class for handling JWT-based authentication.
+ * NOTE: This is a simplified implementation for demonstration purposes.
+ * For production, it is highly recommended to use a robust, well-tested JWT library.
+ */
 export class AuthMiddleware {
+  /**
+   * Authenticates an incoming request by verifying the JWT from the Authorization header.
+   * @param {Request} request - The incoming request object.
+   * @param {Env} env - The environment object containing the JWT secret.
+   * @returns {Promise<AuthResult>} A promise that resolves to an AuthResult object.
+   */
   static async authenticate(request: Request, env: Env): Promise<AuthResult> {
     try {
       const authHeader = request.headers.get('Authorization');
@@ -43,6 +66,13 @@ export class AuthMiddleware {
     }
   }
 
+  /**
+   * Verifies a JWT token's signature and expiration.
+   * @param {string} token - The JWT token to verify.
+   * @param {Env} env - The environment object containing the JWT secret.
+   * @returns {Promise<User | null>} A promise that resolves to the user object if the token is valid, or null otherwise.
+   * @private
+   */
   private static async verifyToken(token: string, env: Env): Promise<User | null> {
     try {
       // Simple JWT verification - in production, use a proper JWT library
@@ -80,6 +110,13 @@ export class AuthMiddleware {
     }
   }
 
+  /**
+   * Creates an HMAC SHA-256 signature for the JWT.
+   * @param {string} data - The data to sign (the encoded header and payload).
+   * @param {string} secret - The secret key for signing.
+   * @returns {Promise<string>} A promise that resolves to the base64url-encoded signature.
+   * @private
+   */
   private static async createSignature(data: string, secret: string): Promise<string> {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -92,11 +129,17 @@ export class AuthMiddleware {
     
     const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
     return btoa(String.fromCharCode(...new Uint8Array(signature)))
-      .replace(/\\+/g, '-')
-      .replace(/\\//g, '_')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
       .replace(/=/g, '');
   }
 
+  /**
+   * Generates a new JWT for a given user.
+   * @param {Partial<User>} user - The user object (or partial user object) to encode in the token.
+   * @param {Env} env - The environment object containing the JWT secret.
+   * @returns {Promise<string>} A promise that resolves to the generated JWT string.
+   */
   static async generateToken(user: Partial<User>, env: Env): Promise<string> {
     const header = {
       alg: 'HS256',

@@ -1,19 +1,45 @@
 import { Env } from '../types/env';
 import { AgentRequest, AgentResponse } from './orchestrator';
 import { LLMService } from '../services/llm-service';
-import { SearchService } from '../services/search-service';
+import { SearchService, SearchResult } from '../services/search-service';
 
+/**
+ * Represents the result of a research synthesis.
+ */
+interface SynthesisResult {
+  /** The synthesized content. */
+  content: string;
+  /** Optional follow-up actions suggested by the agent. */
+  followUpActions?: string[];
+}
+
+/**
+ * An AI agent specialized in conducting research.
+ * This agent can extract search queries from a request, perform web searches,
+ * and synthesize the findings into a coherent response.
+ */
 export class ResearchAgent {
   private env: Env;
   private llmService: LLMService;
   private searchService: SearchService;
 
+  /**
+   * Creates an instance of the ResearchAgent.
+   * @param {Env} env - The environment object.
+   */
   constructor(env: Env) {
     this.env = env;
     this.llmService = new LLMService(env);
     this.searchService = new SearchService(env);
   }
 
+  /**
+   * Processes a research-oriented request.
+   * It extracts search queries, performs searches, synthesizes the results, and returns a response.
+   * @param {AgentRequest} request - The incoming agent request.
+   * @param {any} memory - The current conversation memory.
+   * @returns {Promise<AgentResponse>} A promise that resolves to the agent's response.
+   */
   async process(request: AgentRequest, memory: any): Promise<AgentResponse> {
     try {
       // Extract search queries from the request
@@ -35,7 +61,7 @@ export class ResearchAgent {
         success: true,
         content: synthesizedResponse.content,
         agentUsed: 'research',
-        executionTime: 0,
+        executionTime: 0, // Will be set by the orchestrator
         metadata: {
           searchQueries,
           sourcesFound: searchResults.flat().length,
@@ -55,6 +81,12 @@ export class ResearchAgent {
     }
   }
 
+  /**
+   * Extracts relevant search queries from the user's content using an LLM.
+   * @param {string} content - The user's request content.
+   * @returns {Promise<string[]>} A promise that resolves to an array of search queries.
+   * @private
+   */
   private async extractSearchQueries(content: string): Promise<string[]> {
     const response = await this.llmService.generateResponse({
       model: 'gpt-3.5-turbo',
@@ -69,14 +101,22 @@ export class ResearchAgent {
       maxTokens: 200
     });
 
-    return response.content.split('\\n').filter(q => q.trim().length > 0);
+    return response.content.split('\n').filter(q => q.trim().length > 0);
   }
 
+  /**
+   * Synthesizes information from search results into a comprehensive response.
+   * @param {string} originalRequest - The original user request.
+   * @param {SearchResult[]} searchResults - An array of search results.
+   * @param {any} memory - The current conversation memory.
+   * @returns {Promise<SynthesisResult>} A promise that resolves to the synthesized response.
+   * @private
+   */
   private async synthesizeInformation(
     originalRequest: string,
-    searchResults: any[],
+    searchResults: SearchResult[],
     memory: any
-  ): Promise<{ content: string; followUpActions?: string[] }> {
+  ): Promise<SynthesisResult> {
     const systemPrompt = `You are a research synthesis specialist. Your job is to:
 1. Analyze search results and extract relevant information
 2. Synthesize findings into a comprehensive, well-structured response
@@ -110,6 +150,12 @@ Please synthesize the search results into a comprehensive response that directly
     };
   }
 
+  /**
+   * Extracts potential follow-up actions from the agent's response content.
+   * @param {string} content - The response content from the LLM.
+   * @returns {string[]} An array of suggested follow-up actions.
+   * @private
+   */
   private extractFollowUpActions(content: string): string[] {
     // Simple extraction - could be enhanced with NLP
     const actionKeywords = ['suggest', 'recommend', 'could also', 'might want to', 'consider'];
